@@ -27,13 +27,14 @@ int main(int argc, char* argv[]){
     char* ip;
     int port;
     
+    void helpMenu();
     struct sockaddr_in sa;
     
     while ((c = getopt(argc, argv, "Hhp:s:")) != -1)
     {
         if (c == 'h' || c == 'H') 
         {
-            std::cout << "Help Message" << std::endl;
+            helpMenu();
             return 0;
         }
         if (c == 'p')
@@ -102,7 +103,7 @@ int main(int argc, char* argv[]){
     }
     else //incorrect number of arguments
     {
-        std::cout << "Help Message" << std::endl;
+        helpMenu();
     }
     
     //Client sends message first, then waits for message from other (140 char max)
@@ -136,4 +137,18 @@ int sanityCheckPort(const std::string& arg)
     }
     
     return port;
+}
+
+void helpMenu() {
+    std::cout << "\nWelcome to Chat Help" << std::endl;
+    std::cout << "---------------------" << std::endl;
+    std::cout <<  "To run SERVER use command: ./chat" << std::endl;
+    std::cout << "To run CLIENT use command:" << std::endl;
+    std::cout << "\t- ./chat -p [port #] -s [IP address]" << std::endl;
+    std::cout << "\t  OR" << std::endl;
+    std::cout << "\t- ./chat -s [IP address] -p [port #]\n" << std::endl;
+            
+    std::cout << "Sent MESSAGE LENGTH may be no longer than 140 characters.\n" << std::endl;
+            
+    std::cout << "To EXIT Chat - control+c \n" << std::endl;
 }
