@@ -1,7 +1,6 @@
 /*******************************************
 * Group Name  : Web
 * 
-* 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 
 * 
 * Member1 Name: Deionus Bauer
 * Member1 SIS ID: 831-959-164
@@ -77,9 +76,9 @@ int main(int argc, char* argv[]){
             interfaceInfo = (struct sockaddr_in *) addrs->ifa_addr;
             if (interfaceInfo->sin_family == AF_INET && std::strcmp(interfaceName,addrs->ifa_name) == 0)
             {
-                std::cout << addrs->ifa_name << ":" 
-                << inet_ntoa(interfaceInfo->sin_addr) << ":"
-                << std::endl;
+//                 std::cout << addrs->ifa_name << ":" 
+//                 << inet_ntoa(interfaceInfo->sin_addr) << ":"
+//                 << std::endl;
                 break;
             }
         }
@@ -203,7 +202,6 @@ int main(int argc, char* argv[]){
         int rv;
         Packet data;
         rv = recv(sockfd, &data, sizeof(data), 0);
-        
         //either -1 (error) or 0 length datagram
         if (rv == -1)
         {
@@ -213,12 +211,11 @@ int main(int argc, char* argv[]){
             exit(1);
         }
         
-        
-        uint16_t ver = ntohs(data.version);
+        //uint16_t ver = ntohs(data.version);
         uint16_t len = ntohs(data.message_len);
         
-        std::cout << ver << " " << len << std::endl;
-        std::cout << std::string(data.buf,(size_t) len) << std::endl;
+        //std::cout << ver << " " << len << std::endl;
+        std::cout << "Friend: " << std::string(data.buf, len) << std::endl;
         
         while (!sendMessage(sockfd));
     }
@@ -286,9 +283,9 @@ bool sendMessage(int sockfd) {
     p.message_len = htons(msg.length());
     std::copy(msg.begin(), msg.end(), p.buf);
     
-    std::cout << p.version << " " << p.message_len << " " << p.buf << std::endl;
+//    std::cout << p.version << " " << p.message_len << " " << p.buf << std::endl;
 
-    send(sockfd, &p, msg.length(), 0);
+    send(sockfd, &p, sizeof(p), 0);
     
     return true;
 }
