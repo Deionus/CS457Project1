@@ -1,13 +1,13 @@
 /*******************************************
-* Group Name  : XXXXXX
+* Group Name  : Web
 * 
 * Member1 Name: Deionus Bauer
 * Member1 SIS ID: 831-959-164
 * Member1 Login ID: deionus
 * 
-* Member2 Name: XXXXXX
-* Member2 SIS ID: XXXXXX
-* Member2 Login ID: XXXXXX
+* Member2 Name: Meridith McCann
+* Member2 SIS ID: 832-827-122
+* Member2 Login ID: mjmccann
 ********************************************/
 
 #include <iostream>
