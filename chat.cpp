@@ -1,6 +1,8 @@
 /*******************************************
 * Group Name  : Web
 * 
+* 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 
+* 
 * Member1 Name: Deionus Bauer
 * Member1 SIS ID: 831-959-164
 * Member1 Login ID: deionus
@@ -18,11 +20,13 @@
 #include <netdb.h>
 #include <cstring>
 #include <errno.h>
+#include <limits>
+#include <ifaddrs.h>
 
 int sanityCheckPort(const std::string&);
 void helpMenu();
 bool sendMessage(int);
-    
+
 int main(int argc, char* argv[]){
     
     int c;
@@ -30,6 +34,8 @@ int main(int argc, char* argv[]){
     
     char* ip;
     int port;
+    
+    char* portarg;
     
     int16_t version = 457;
     int16_t msg_len;
@@ -43,7 +49,7 @@ int main(int argc, char* argv[]){
         }
         if (c == 'p')
         {
-            port = sanityCheckPort(optarg);
+            portarg = optarg;
             count++;
         }
         if (c == 's')
@@ -57,41 +63,54 @@ int main(int argc, char* argv[]){
     
     if (count == 0) //no arguments, run Server setup
     { 
+        
+        char interfaceName[] = "eno1";
+        struct ifaddrs *addrs;
+        getifaddrs(&addrs);
+        
+        struct sockaddr_in *interfaceInfo;
+        interfaceInfo = (struct sockaddr_in *) addrs->ifa_addr;
+        while((addrs = addrs->ifa_next) != NULL)
+        {
+            interfaceInfo = (struct sockaddr_in *) addrs->ifa_addr;
+            if (interfaceInfo->sin_family == AF_INET && std::strcmp(interfaceName,addrs->ifa_name) == 0)
+            {
+                std::cout << addrs->ifa_name << ":" 
+                << inet_ntoa(interfaceInfo->sin_addr) << ":"
+                << std::endl;
+                break;
+            }
+        }
+        
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         
         //Wait for connection here
-        struct addrinfo hints, *servinfo;
         struct sockaddr_storage connection_addr;
         socklen_t sin_size;
-        hints.ai_family = AF_INET;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_flags = AI_PASSIVE; //"By using the AI_PASSIVE flag, I’m telling the program to bind to the IP of the host it’s running on." -Beej
         char s[INET6_ADDRSTRLEN];
         int rv;
-        
-        //No address since AI_PASSIVE flag
-        if((rv = getaddrinfo(NULL, "19993", &hints, &servinfo)) != 0)
-        {
-            std::cout << "Error getting addres info" << std::endl;
-        }
         
         void *addr;
         char ipstr[32];
     
-        struct sockaddr_in *ipv4 = (struct sockaddr_in *)servinfo->ai_addr;
-        addr = &(ipv4->sin_addr);
+        struct sockaddr_in serverAddr;
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(19993);
+        serverAddr.sin_addr = interfaceInfo->sin_addr;
+        memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
+        
+        addr=&serverAddr.sin_addr;
         
         //attempt to bind
-        rv = bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen);
+        rv = bind(sockfd, (struct sockaddr *)&serverAddr, sizeof serverAddr);
         if (rv == -1) 
         { 
             close(sockfd);
-            std::cout << "Binding error" << std::endl; 
+            std::cout << "Binding error "<< errno << std::endl; 
             exit(1); 
         }
         
-        inet_ntop(servinfo->ai_family, addr, ipstr, sizeof ipstr);
-        freeaddrinfo(servinfo);
+        inet_ntop(AF_INET, addr, ipstr, sizeof ipstr);
         
         //How do we know which IP/Port to listen on? Maybe hard code the port, what about IP?
         rv = listen(sockfd, 10); //listen on socket socketfd, backlog of 10
@@ -121,6 +140,8 @@ int main(int argc, char* argv[]){
     }
     else if (count == 2)//Arguments present, run Client setup
     { 
+        port = sanityCheckPort(portarg);
+        
         // Establish Connection here
         std::cout << "Connecting to server...";
         
@@ -146,6 +167,7 @@ int main(int argc, char* argv[]){
         if (sockfd == -1) 
         {
             std::cout << "Socket Error" << std::endl;
+            close(sockfd);
             exit(1);
         }
         
@@ -165,7 +187,7 @@ int main(int argc, char* argv[]){
         
         //Send Message
         
-        sendMessage(sockfd);
+        while (!sendMessage(sockfd));
 
     }
     else //incorrect number of arguments
@@ -173,7 +195,7 @@ int main(int argc, char* argv[]){
         helpMenu();
     }
     
-//    Wait for a message, collect/display it, then send a message
+//  Wait for a message, collect/display it, then send a message
     while(true)
     {
         int rv;
@@ -190,10 +212,11 @@ int main(int argc, char* argv[]){
             }
         }
         
-        std::cout << "Message of length " << rv << " received." << std::endl;
-        exit(0);
+        buf[rv] = '\0';
+        std::cout << "Friend: " << buf << std::endl;
         //IMPORTANT! convert the message to network byte order before sending, and then convert back to host byte order after receiving
 
+        while (!sendMessage(sockfd));
     }
     
     return 0;
@@ -233,17 +256,24 @@ void helpMenu() {
     std::cout << "Sent MESSAGE LENGTH may be no longer than 140 characters.\n" << std::endl;
             
     std::cout << "To EXIT Chat - control+c \n" << std::endl;
+    
+    exit(0);
 }
 
 bool sendMessage(int sockfd) {
     std::string msg;
-    std::getline(std::cin,msg);
     
-    std::cout << "You: " << msg << std::endl;
+    std::cout << "You: ";
+    
+//    std::cin.clear();
+//    std::cin.ignore(10000, '\n');
+//    std::cin.ignore(std::numeric_limits<std::streamsize>::max());
+
+    std::getline(std::cin,msg,'\n');
     
     if (msg.length() > 140)
     {
-        std::cout << "Message not sent - messages must be 140 characters or less";
+        std::cout << "Message not sent - messages must be 140 characters or less" << std::endl;
         return false;
     }
     
