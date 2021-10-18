@@ -17,9 +17,12 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <cstring>
+#include <errno.h>
 
 int sanityCheckPort(const std::string&);
-
+void helpMenu();
+bool sendMessage(int);
+    
 int main(int argc, char* argv[]){
     
     int c;
@@ -28,8 +31,8 @@ int main(int argc, char* argv[]){
     char* ip;
     int port;
     
-    void helpMenu();
-    struct sockaddr_in sa;
+    int16_t version = 457;
+    int16_t msg_len;
     
     while ((c = getopt(argc, argv, "Hhp:s:")) != -1)
     {
@@ -50,7 +53,7 @@ int main(int argc, char* argv[]){
         }
     }
     
-    int sockfd; 
+    int sockfd;
     
     if (count == 0) //no arguments, run Server setup
     { 
@@ -111,16 +114,16 @@ int main(int argc, char* argv[]){
         }
         
         inet_ntop(connection_addr.ss_family, &(((struct sockaddr_in*)&connection_addr)->sin_addr), s, sizeof s);
-        std::cout << "server: got connection from " << s << std::endl;
+        sockfd = connection_fd;
+        std::cout << "Found a friend! You receive first." << std::endl;
         
+        //Code now falls down to the while loop
     }
     else if (count == 2)//Arguments present, run Client setup
     { 
         // Establish Connection here
-        std::cout << "Connecting to server..." << std::endl;
+        std::cout << "Connecting to server...";
         
-        int numbytes;
-        char buf[140]; //140 byte large buffer
         struct addrinfo hints, *servinfo;
         int rv;
         char s[INET6_ADDRSTRLEN];
@@ -128,7 +131,6 @@ int main(int argc, char* argv[]){
         memset(&hints, 0, sizeof hints);
         hints.ai_family = AF_INET;
         hints.ai_socktype = SOCK_STREAM;
-        
         
         std::string sport = std::to_string(port);
         char const *pchar = sport.c_str();
@@ -156,23 +158,43 @@ int main(int argc, char* argv[]){
         }
         
         inet_ntop(servinfo->ai_family, &(((struct sockaddr_in*)&servinfo)->sin_addr), s, sizeof s);
-        printf("client: connecting to %s\n", s);
+        std::cout << " Connected!" << std::endl;
+        std::cout << "Connected to a friend! You send first." << std::endl;
 
         freeaddrinfo(servinfo);
         
+        //Send Message
+        
+        sendMessage(sockfd);
+
     }
     else //incorrect number of arguments
     {
         helpMenu();
     }
     
-    //Client sends message first, then waits for message from other (140 char max)
-//     while()
-//     {
-//         
-//          IMPORTANT! convert the message to network byte order before sending, and then convert back to host byte order after receiving
-//
-//     }
+//    Wait for a message, collect/display it, then send a message
+    while(true)
+    {
+        int rv;
+        char buf[141];
+        while((rv = recv(sockfd, buf, 140, 0)) < 1)
+        {
+            //either -1 (error) or 0 length datagram
+            if (rv == -1)
+            {
+                std::cout << "Error receiving message. Exiting" << std::endl;
+                close(sockfd);
+                std::cout << errno << std::endl;
+                exit(1);
+            }
+        }
+        
+        std::cout << "Message of length " << rv << " received." << std::endl;
+        exit(0);
+        //IMPORTANT! convert the message to network byte order before sending, and then convert back to host byte order after receiving
+
+    }
     
     return 0;
 }
@@ -211,4 +233,24 @@ void helpMenu() {
     std::cout << "Sent MESSAGE LENGTH may be no longer than 140 characters.\n" << std::endl;
             
     std::cout << "To EXIT Chat - control+c \n" << std::endl;
+}
+
+bool sendMessage(int sockfd) {
+    std::string msg;
+    std::getline(std::cin,msg);
+    
+    std::cout << "You: " << msg << std::endl;
+    
+    if (msg.length() > 140)
+    {
+        std::cout << "Message not sent - messages must be 140 characters or less";
+        return false;
+    }
+    
+    //stuff message in a buffer
+    const char* buf = msg.c_str();
+    
+    send(sockfd, buf, msg.length(), 0);
+    
+    return true;
 }
