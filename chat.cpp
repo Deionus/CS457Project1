@@ -27,6 +27,12 @@ int sanityCheckPort(const std::string&);
 void helpMenu();
 bool sendMessage(int);
 
+struct Packet {
+    uint16_t version;
+    uint16_t message_len;
+    char buf[140];
+};
+
 int main(int argc, char* argv[]){
     
     int c;
@@ -36,9 +42,6 @@ int main(int argc, char* argv[]){
     int port;
     
     char* portarg;
-    
-    int16_t version = 457;
-    int16_t msg_len;
     
     while ((c = getopt(argc, argv, "Hhp:s:")) != -1)
     {
@@ -63,7 +66,6 @@ int main(int argc, char* argv[]){
     
     if (count == 0) //no arguments, run Server setup
     { 
-        
         char interfaceName[] = "eno1";
         struct ifaddrs *addrs;
         getifaddrs(&addrs);
@@ -199,23 +201,25 @@ int main(int argc, char* argv[]){
     while(true)
     {
         int rv;
-        char buf[141];
-        while((rv = recv(sockfd, buf, 140, 0)) < 1)
+        Packet data;
+        rv = recv(sockfd, &data, sizeof(data), 0);
+        
+        //either -1 (error) or 0 length datagram
+        if (rv == -1)
         {
-            //either -1 (error) or 0 length datagram
-            if (rv == -1)
-            {
-                std::cout << "Error receiving message. Exiting" << std::endl;
-                close(sockfd);
-                std::cout << errno << std::endl;
-                exit(1);
-            }
+            std::cout << "Error receiving message. Exiting" << std::endl;
+            close(sockfd);
+            std::cout << errno << std::endl;
+            exit(1);
         }
         
-        buf[rv] = '\0';
-        std::cout << "Friend: " << buf << std::endl;
-        //IMPORTANT! convert the message to network byte order before sending, and then convert back to host byte order after receiving
-
+        
+        uint16_t ver = ntohs(data.version);
+        uint16_t len = ntohs(data.message_len);
+        
+        std::cout << ver << " " << len << std::endl;
+        std::cout << std::string(data.buf,(size_t) len) << std::endl;
+        
         while (!sendMessage(sockfd));
     }
     
@@ -277,10 +281,14 @@ bool sendMessage(int sockfd) {
         return false;
     }
     
-    //stuff message in a buffer
-    const char* buf = msg.c_str();
+    Packet p;
+    p.version = htons(457);
+    p.message_len = htons(msg.length());
+    std::copy(msg.begin(), msg.end(), p.buf);
     
-    send(sockfd, buf, msg.length(), 0);
+    std::cout << p.version << " " << p.message_len << " " << p.buf << std::endl;
+
+    send(sockfd, &p, msg.length(), 0);
     
     return true;
 }
