@@ -1,6 +1,7 @@
 /*******************************************
 * Group Name  : Web
 * 
+* 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 
 * 
 * Member1 Name: Deionus Bauer
 * Member1 SIS ID: 831-959-164
@@ -225,6 +226,15 @@ int main(int argc, char* argv[]){
 
 int sanityCheckPort(const std::string& arg)
 {
+    for (char c : arg)
+    {
+        if (c < '0' || c > '9')
+        {
+            std::cout << "'" << arg << "' is not a valid port" << std::endl;
+            exit(1);
+        }
+    }
+    
     int port;
     try 
     {
